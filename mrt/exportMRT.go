@@ -66,7 +66,6 @@ func exportMrt(filename string, output chan string) error {
 			pct++
 		}
 
-		//pct = int((bytesRead * 100) / totalBytes)
 	}
 
 	close(output)
