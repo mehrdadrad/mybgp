@@ -1,3 +1,6 @@
+// This is a on the side project to find out how we can export
+// entire BGP table. it already exports to the json
+// format and it's in active developement right now.
 package main
 
 import (
@@ -7,6 +10,7 @@ import (
 	"github.com/osrg/gobgp/packet/mrt"
 	"gopkg.in/cheggaaa/pb.v1"
 	"io"
+	"log"
 	"os"
 	"sync"
 )
@@ -18,6 +22,7 @@ var (
 	pct     int = 0
 )
 
+// Export MTR func based on the GoBGP library
 func exportMrt(filename string, output chan string) error {
 	var bytesRead int64
 	file, err := os.Open(filename)
@@ -74,10 +79,15 @@ func exportMrt(filename string, output chan string) error {
 
 }
 
+// Init args and progress
 func init() {
 	flag.StringVar(&mrtFile, "mrtfile", "", "enter the full MRT path")
 	flag.StringVar(&format, "format", "json", "export format")
 	flag.Parse()
+
+	if mrtFile == "" {
+		log.Fatal("The MRT file not specified!")
+	}
 
 	bar = pb.New(100)
 	bar.SetWidth(80)
