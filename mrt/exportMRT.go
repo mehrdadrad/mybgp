@@ -1,14 +1,21 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/osrg/gobgp/packet/mrt"
 	"io"
 	"os"
+	"sync"
 )
 
-func exportMrt(filename string) error {
+var (
+	mrtFile string
+	format  string
+)
+
+func exportMrt(filename string, output chan string) error {
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -40,15 +47,45 @@ func exportMrt(filename string) error {
 		if err != nil {
 			fmt.Errorf("failed to parse: %s", err)
 		}
+		d, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Errorf("marshal failed %s", err)
+		}
 
-		fmt.Printf("%+v", msg)
+		output <- string(d)
 	}
 
+	close(output)
 	return nil
 
 }
-func main() {
-	mrtFile := flag.String("mrtfile", "", "enter the full MRT path")
+
+func init() {
+	flag.StringVar(&mrtFile, "mrtfile", "", "enter the full MRT path")
+	flag.StringVar(&format, "format", "json", "export format")
 	flag.Parse()
-	exportMrt(*mrtFile)
+}
+
+func main() {
+	ch := make(chan string)
+	go exportMrt(mrtFile, ch)
+
+	switch format {
+	case "json":
+		var once sync.Once
+		f, err := os.Create("./mybgp.json")
+		if err != nil {
+			fmt.Errorf("%s", err)
+		}
+		f.WriteString("[")
+		for r := range ch {
+			once.Do(func() {
+				f.WriteString(r)
+			})
+			f.WriteString("," + r)
+			f.Sync()
+		}
+		f.WriteString("]")
+	}
+
 }
