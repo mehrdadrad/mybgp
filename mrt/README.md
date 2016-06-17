@@ -1,5 +1,8 @@
 # Export Multi-Threaded Routing Toolkit (MRT) Routing Information
 
+- JSON file
+- MongoDB
+
 ```
 #go run mrt.go -help
   -format string
