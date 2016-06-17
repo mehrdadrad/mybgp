@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/osrg/gobgp/packet/mrt"
 	"gopkg.in/cheggaaa/pb.v1"
+	"gopkg.in/mgo.v2"
 	"io"
 	"log"
 	"os"
@@ -24,7 +25,7 @@ var (
 )
 
 // Export MTR func based on the GoBGP library
-func exportMrt(filename string, output chan string) error {
+func exportMrt(filename string, output chan *mrt.MRTMessage) error {
 	var bytesRead int64
 	file, err := os.Open(filename)
 	if err != nil {
@@ -60,12 +61,8 @@ func exportMrt(filename string, output chan string) error {
 		if err != nil {
 			fmt.Errorf("failed to parse: %s", err)
 		}
-		d, err := json.Marshal(msg)
-		if err != nil {
-			fmt.Errorf("marshal failed %s", err)
-		}
-
-		output <- string(d)
+		//fmt.Printf("%+v", msg)
+		output <- msg
 
 		for i := 0; i < ((int((bytesRead * 100) / totalBytes)) - pct); i++ {
 			bar.Increment()
@@ -99,7 +96,7 @@ func init() {
 }
 
 func main() {
-	ch := make(chan string)
+	ch := make(chan *mrt.MRTMessage)
 	go exportMrt(mrtFile, ch)
 
 	switch format {
@@ -111,13 +108,36 @@ func main() {
 		}
 		f.WriteString("[")
 		for r := range ch {
+			d, err := json.Marshal(r.Body)
+			if err != nil {
+				fmt.Errorf("marshal failed %s", err)
+			}
 			once.Do(func() {
-				f.WriteString(r)
+				f.Write(d)
 			})
-			f.WriteString("," + r)
+			f.WriteString(",")
+			f.Write(d)
 			f.Sync()
 		}
 		f.WriteString("]")
+		f.Close()
+	case "mongo":
+		session, err := mgo.Dial("localhost")
+		if err != nil {
+			panic(err)
+		}
+		defer session.Close()
+
+		session.SetMode(mgo.Monotonic, true)
+		c := session.DB("bgp").C("dump")
+
+		for r := range ch {
+			err = c.Insert(r.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
 	}
 
 }
