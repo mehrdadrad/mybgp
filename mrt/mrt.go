@@ -1,5 +1,5 @@
-// This is a on the side project to find out how we can export
-// entire BGP table. it already exports to the json
+// This is a project to find out how we can parse
+// and export entire BGP table. it already exports to the json
 // format and it's in active developement right now.
 package main
 
@@ -18,6 +18,7 @@ import (
 var (
 	mrtFile string
 	format  string
+	expFile string
 	bar     *pb.ProgressBar
 	pct     int = 0
 )
@@ -83,6 +84,7 @@ func exportMrt(filename string, output chan string) error {
 func init() {
 	flag.StringVar(&mrtFile, "mrtfile", "", "enter the full MRT path")
 	flag.StringVar(&format, "format", "json", "export format")
+	flag.StringVar(&expFile, "jsonfile", "export_mrt.json", "export file full path")
 	flag.Parse()
 
 	if mrtFile == "" {
@@ -103,7 +105,7 @@ func main() {
 	switch format {
 	case "json":
 		var once sync.Once
-		f, err := os.Create("./mybgp.json")
+		f, err := os.Create(expFile)
 		if err != nil {
 			fmt.Errorf("%s", err)
 		}
